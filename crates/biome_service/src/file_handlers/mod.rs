@@ -6,7 +6,7 @@ use crate::WorkspaceError;
 use crate::diagnostics::{QueryDiagnostic, SearchError};
 pub use crate::file_handlers::astro::{ASTRO_FENCE, AstroFileHandler};
 use crate::file_handlers::graphql::GraphqlFileHandler;
-pub use crate::file_handlers::svelte::{SVELTE_FENCE, SvelteFileHandler};
+pub use crate::file_handlers::svelte::{SVELTE_SCRIPT_FENCE, SVELTE_STYLE_FENCE, SvelteFileHandler};
 pub use crate::file_handlers::vue::{VUE_FENCE, VueFileHandler};
 use crate::settings::Settings;
 use crate::workspace::{
