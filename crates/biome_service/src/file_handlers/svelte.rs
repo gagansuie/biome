@@ -286,20 +286,23 @@ fn format(
                     &mut cache
                 );
                 
-                // Format the script using the JavaScript formatter
-                if let Ok(js_printed) = javascript::format(
-                    biome_path,
-                    &script_file_source,
-                    script_parse.into(),
-                    settings,
-                ) {
-                    // Replace the script content in the formatted HTML
-                    formatted_text = format!(
-                        "{}{}{}",
-                        &formatted_text[..script_match.start()],
-                        js_printed.into_code(),
-                        &formatted_text[script_match.end()..]
-                    );
+                // Get JavaScript format options, ensuring we use the original biome_path
+                // This ensures all JavaScript formatter settings from biome.json are applied
+                // including semicolons, quotes, indentation, etc.
+                let js_options = settings.format_options::<biome_js_syntax::JsLanguage>(biome_path, document_file_source);
+                
+                // Format the script using the JavaScript formatter with explicit options
+                let js_tree = script_parse.syntax();
+                if let Ok(js_formatted) = biome_js_formatter::format_node(js_options, &js_tree) {
+                    if let Ok(js_printed) = js_formatted.print() {
+                        // Replace the script content in the formatted HTML
+                        formatted_text = format!(
+                            "{}{}{}",
+                            &formatted_text[..script_match.start()],
+                            js_printed.into_code(),
+                            &formatted_text[script_match.end()..]
+                        );
+                    }
                 }
             }
         }
