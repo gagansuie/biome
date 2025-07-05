@@ -46,6 +46,42 @@ var foo: string = "";
 </script>
 <div></div>"#;
 
+const SVELTE_INDENTATION_TEST_UNFORMATTED: &str = r#"<script>
+    import Component from "./Component.svelte";
+    const hello = "world";
+    function test() {
+        return true;
+    }
+</script>
+<div></div>"#;
+
+const SVELTE_INDENTATION_TEST_FORMATTED: &str = r#"<script>
+import Component from "./Component.svelte";
+const hello = "world";
+function test() {
+  return true;
+}
+</script>
+<div></div>"#;
+
+const SVELTE_TS_INDENTATION_TEST_UNFORMATTED: &str = r#"<script lang="ts">
+    import Component from "./Component.svelte";
+    const hello: string = "world";
+    function test(): boolean {
+        return true;
+    }
+</script>
+<div></div>"#;
+
+const SVELTE_TS_INDENTATION_TEST_FORMATTED: &str = r#"<script lang="ts">
+import Component from "./Component.svelte";
+const hello: string = "world";
+function test(): boolean {
+  return true;
+}
+</script>
+<div></div>"#;
+
 #[test]
 fn sorts_imports_check() {
     let fs = MemoryFileSystem::default();
@@ -421,23 +457,22 @@ fn check_stdin_write_unsafe_successfully() {
     let fs = MemoryFileSystem::default();
     let mut console = BufferConsole::default();
 
-    console
-        .in_buffer
-        .push(SVELTE_TS_FILE_CHECK_BEFORE.to_string());
-
     let (fs, result) = run_cli(
         fs,
         &mut console,
         Args::from(
             [
                 "check",
+                "--stdin-file-path=file.svelte",
+                "--apply-unsafe",
                 "--write",
-                "--unsafe",
-                "--stdin-file-path",
-                "file.svelte",
+                "--formatter-enabled=true",
+                "--organize-imports-enabled=true",
+                "--linter-enabled=true",
             ]
             .as_slice(),
         ),
+        Some(SVELTE_TS_FILE_CHECK_BEFORE),
     );
 
     assert!(result.is_ok(), "run_cli returned {result:?}");
@@ -445,6 +480,152 @@ fn check_stdin_write_unsafe_successfully() {
     assert_cli_snapshot(SnapshotPayload::new(
         module_path!(),
         "check_stdin_write_unsafe_successfully",
+        fs,
+        console,
+        result,
+    ));
+}
+
+#[test]
+fn format_svelte_js_indentation() {
+    let fs = MemoryFileSystem::default();
+    let mut console = BufferConsole::default();
+
+    let svelte_file_path = Utf8Path::new("file.svelte");
+    fs.insert(
+        svelte_file_path.into(),
+        SVELTE_INDENTATION_TEST_UNFORMATTED.as_bytes(),
+    );
+
+    let (fs, result) = run_cli(
+        fs,
+        &mut console,
+        Args::from(
+            [
+                "format",
+                svelte_file_path.as_str(),
+            ]
+            .as_slice(),
+        ),
+    );
+
+    assert!(result.is_ok(), "run_cli returned {result:?}");
+
+    assert_file_contents(&fs, svelte_file_path, SVELTE_INDENTATION_TEST_UNFORMATTED);
+
+    assert_cli_snapshot(SnapshotPayload::new(
+        module_path!(),
+        "format_svelte_js_indentation",
+        fs,
+        console,
+        result,
+    ));
+}
+
+#[test]
+fn format_svelte_js_indentation_write() {
+    let fs = MemoryFileSystem::default();
+    let mut console = BufferConsole::default();
+
+    let svelte_file_path = Utf8Path::new("file.svelte");
+    fs.insert(
+        svelte_file_path.into(),
+        SVELTE_INDENTATION_TEST_UNFORMATTED.as_bytes(),
+    );
+
+    let (fs, result) = run_cli(
+        fs,
+        &mut console,
+        Args::from(
+            [
+                "format",
+                "--write",
+                svelte_file_path.as_str(),
+            ]
+            .as_slice(),
+        ),
+    );
+
+    assert!(result.is_ok(), "run_cli returned {result:?}");
+
+    assert_file_contents(&fs, svelte_file_path, SVELTE_INDENTATION_TEST_FORMATTED);
+
+    assert_cli_snapshot(SnapshotPayload::new(
+        module_path!(),
+        "format_svelte_js_indentation_write",
+        fs,
+        console,
+        result,
+    ));
+}
+
+#[test]
+fn format_svelte_ts_indentation() {
+    let fs = MemoryFileSystem::default();
+    let mut console = BufferConsole::default();
+
+    let svelte_file_path = Utf8Path::new("file.svelte");
+    fs.insert(
+        svelte_file_path.into(),
+        SVELTE_TS_INDENTATION_TEST_UNFORMATTED.as_bytes(),
+    );
+
+    let (fs, result) = run_cli(
+        fs,
+        &mut console,
+        Args::from(
+            [
+                "format",
+                svelte_file_path.as_str(),
+            ]
+            .as_slice(),
+        ),
+    );
+
+    assert!(result.is_ok(), "run_cli returned {result:?}");
+
+    assert_file_contents(&fs, svelte_file_path, SVELTE_TS_INDENTATION_TEST_UNFORMATTED);
+
+    assert_cli_snapshot(SnapshotPayload::new(
+        module_path!(),
+        "format_svelte_ts_indentation",
+        fs,
+        console,
+        result,
+    ));
+}
+
+#[test]
+fn format_svelte_ts_indentation_write() {
+    let fs = MemoryFileSystem::default();
+    let mut console = BufferConsole::default();
+
+    let svelte_file_path = Utf8Path::new("file.svelte");
+    fs.insert(
+        svelte_file_path.into(),
+        SVELTE_TS_INDENTATION_TEST_UNFORMATTED.as_bytes(),
+    );
+
+    let (fs, result) = run_cli(
+        fs,
+        &mut console,
+        Args::from(
+            [
+                "format",
+                "--write",
+                svelte_file_path.as_str(),
+            ]
+            .as_slice(),
+        ),
+    );
+
+    assert!(result.is_ok(), "run_cli returned {result:?}");
+
+    assert_file_contents(&fs, svelte_file_path, SVELTE_TS_INDENTATION_TEST_FORMATTED);
+
+    assert_cli_snapshot(SnapshotPayload::new(
+        module_path!(),
+        "format_svelte_ts_indentation_write",
         fs,
         console,
         result,
