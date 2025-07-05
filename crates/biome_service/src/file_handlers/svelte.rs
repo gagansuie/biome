@@ -23,7 +23,9 @@ pub struct SvelteFileHandler;
 
 // https://regex101.com/r/E4n4hh/6
 pub static SVELTE_FENCE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r#"(?ixs)(?<opening><script(?:\s.*?)?>)\r?\n?(?<script>(?U:.*))</script>"#).unwrap()
+    // Modified regex to ensure proper handling of newlines after the opening script tag
+    // This helps fix indentation issues in script blocks (biomejs/biome#1719)
+    Regex::new(r#"(?ixs)(?<opening><script(?:\s.*?)?>)\r?\n(?<script>(?U:.*))</script>"#).unwrap()
 });
 
 impl SvelteFileHandler {
@@ -137,11 +139,7 @@ fn parse(
 /// Format a Svelte file's script content
 /// 
 /// This function formats the JavaScript/TypeScript code inside <script> tags in Svelte files.
-/// It uses a custom format option with zero indentation to ensure the code inside script tags
-/// starts from the beginning of the line without any indentation.
-/// 
-/// This fixes the issue described in https://github.com/biomejs/biome/issues/1719 where
-/// code inside script tags was incorrectly indented.
+/// It delegates to the JavaScript formatter.
 #[tracing::instrument(level = "debug", skip(parse, settings))]
 fn format(
     biome_path: &BiomePath,
@@ -149,27 +147,11 @@ fn format(
     parse: AnyParse,
     settings: &Settings,
 ) -> Result<Printed, WorkspaceError> {
-    // Create a custom format options with zero indentation for script blocks in Svelte files
-    // This ensures the code inside <script> tags starts from the beginning of the line
-    let mut options = settings.format_options::<biome_js_syntax::JsLanguage>(biome_path, document_file_source);
-    
-    // Set initial indentation to zero for script blocks
-    options.set_indent_width(biome_formatter::IndentWidth::new(0));
-    
-    let tree = parse.syntax();
-    let formatted = biome_js_formatter::format_node(options, &tree)?;
-    match formatted.print() {
-        Ok(printed) => Ok(printed),
-        Err(error) => {
-            tracing::error!("The file {} couldn't be formatted", biome_path.as_str());
-            Err(WorkspaceError::FormatError(error.into()))
-        }
-    }
+    javascript::format(biome_path, document_file_source, parse, settings)
 }
 /// Format a range within a Svelte file's script content
 /// 
 /// Similar to the format function, but only formats a specific range within the script.
-/// Uses zero indentation to ensure proper formatting of script content.
 pub(crate) fn format_range(
     biome_path: &BiomePath,
     document_file_source: &DocumentFileSource,
@@ -177,27 +159,12 @@ pub(crate) fn format_range(
     settings: &Settings,
     range: TextRange,
 ) -> Result<Printed, WorkspaceError> {
-    // Create a custom format options with zero indentation for script blocks in Svelte files
-    let mut options = settings.format_options::<biome_js_syntax::JsLanguage>(biome_path, document_file_source);
-    
-    // Set initial indentation to zero for script blocks
-    options.set_indent_width(biome_formatter::IndentWidth::new(0));
-    
-    let tree = parse.syntax();
-    let formatted = biome_js_formatter::format_range_node(options, &tree, range)?;
-    match formatted.print() {
-        Ok(printed) => Ok(printed),
-        Err(error) => {
-            tracing::error!("The file {} couldn't be formatted", biome_path.as_str());
-            Err(WorkspaceError::FormatError(error.into()))
-        }
-    }
+    javascript::format_range(biome_path, document_file_source, parse, settings, range)
 }
 
 /// Format on type for Svelte file's script content
 /// 
-/// Formats the script content when the user types, using zero indentation
-/// to ensure proper formatting of script content.
+/// Formats the script content when the user types.
 pub(crate) fn format_on_type(
     biome_path: &BiomePath,
     document_file_source: &DocumentFileSource,
@@ -205,21 +172,7 @@ pub(crate) fn format_on_type(
     settings: &Settings,
     offset: TextSize,
 ) -> Result<Printed, WorkspaceError> {
-    // Create a custom format options with zero indentation for script blocks in Svelte files
-    let mut options = settings.format_options::<biome_js_syntax::JsLanguage>(biome_path, document_file_source);
-    
-    // Set initial indentation to zero for script blocks
-    options.set_indent_width(biome_formatter::IndentWidth::new(0));
-    
-    let tree = parse.syntax();
-    let formatted = biome_js_formatter::format_on_type_node(options, &tree, offset)?;
-    match formatted.print() {
-        Ok(printed) => Ok(printed),
-        Err(error) => {
-            tracing::error!("The file {} couldn't be formatted", biome_path.as_str());
-            Err(WorkspaceError::FormatError(error.into()))
-        }
-    }
+    javascript::format_on_type(biome_path, document_file_source, parse, settings, offset)
 }
 
 pub(crate) fn lint(params: LintParams) -> LintResults {
